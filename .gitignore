@@ -184,3 +184,7 @@ node_modules
 # Generated files
 .psci
 output
+
+src/Secret.js
+
+.psc-ide-port

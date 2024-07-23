@@ -1,8 +1,14 @@
 {
   "name": "llm-sim-v2",
   "type": "module",
+  "scripts": {
+    "build": "spago build"
+  },
   "devDependencies": {
     "purescript": "^0.15.16-1",
     "spago": "^0.93.37"
+  },
+  "dependencies": {
+    "cohere-ai": "^7.11.0"
   }
 }

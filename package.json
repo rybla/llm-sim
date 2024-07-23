@@ -1,0 +1,8 @@
+{
+  "name": "llm-sim-v2",
+  "type": "module",
+  "devDependencies": {
+    "purescript": "^0.15.16-1",
+    "spago": "^0.93.37"
+  }
+}

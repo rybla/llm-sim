@@ -1,0 +1,35 @@
+package:
+  name: llm-sim-v2
+  dependencies:
+    - console
+    - effect
+    - prelude
+    - aff-promise
+    - argonaut
+    - argonaut-generic
+    - arrays
+    - console
+    - debug
+    - effect
+    - halogen
+    - homogeneous
+    - js-uri
+    - lists
+    - maybe
+    - node-fs
+    - parsing
+    - prelude
+    - profunctor-lenses
+    - record
+    - transformers
+    - unicode
+    - uuid
+    - variant
+    - web-url
+  test:
+    main: Test.Main
+    dependencies: []
+workspace:
+  packageSet:
+    registry: 55.2.0
+  extraPackages: {}

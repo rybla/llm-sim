@@ -26,6 +26,8 @@ newtype Model state actionsSpec actions = Model
   , initialState :: Aff state
   , getPrompt :: state -> Aff String
   , updateState :: Variant actions -> state -> Aff state
+  , describeContext :: state -> String
+  , describeState :: state -> String
   }
 
 newtype SomeModel = SomeModel (forall r. SomeModelK r -> r)
@@ -45,7 +47,7 @@ unSomeModel k1 (SomeModel k2) = k2 k1
 -- ActionsSpec
 
 class ActionsSpec actionsSpec actions | actionsSpec -> actions where
-  toTools_fromActionSpec :: Record actionsSpec -> Tools
+  toTools_fromActionsSpec :: Record actionsSpec -> Tools
   fromToolCall_toAction :: forall m. MonadError String m => Record actionsSpec -> ToolCall -> m (Variant actions)
 
 instance
@@ -53,15 +55,15 @@ instance
   , ActionsSpec_map actionsSpec actionsSpecList actions
   ) =>
   ActionsSpec actionsSpec actions where
-  toTools_fromActionSpec = toTools_fromActionSpec_map (Proxy :: Proxy actionsSpecList)
+  toTools_fromActionsSpec = toTools_fromActionsSpec_map (Proxy :: Proxy actionsSpecList)
   fromToolCall_toAction = fromToolCall_toAction_map (Proxy :: Proxy actionsSpecList)
 
 class ActionsSpec_map actionsSpec (actionsSpecList :: RowList Type) actions | actionsSpec actionsSpecList -> actions where
-  toTools_fromActionSpec_map :: Proxy actionsSpecList -> Record actionsSpec -> Tools
+  toTools_fromActionsSpec_map :: Proxy actionsSpecList -> Record actionsSpec -> Tools
   fromToolCall_toAction_map :: forall m. MonadError String m => Proxy actionsSpecList -> Record actionsSpec -> ToolCall -> m (Variant actions)
 
 instance ActionsSpec_map actionsSpec RL.Nil actions where
-  toTools_fromActionSpec_map _ _ = []
+  toTools_fromActionsSpec_map _ _ = []
   fromToolCall_toAction_map _ _actionsSpec { name } = throwError name
 
 instance
@@ -73,7 +75,7 @@ instance
   ) =>
   ActionsSpec_map actionsSpec (RL.Cons name (ActionSpec actionParamsSpec) actionsSpecList) actions
   where
-  toTools_fromActionSpec_map _ actionsSpec =
+  toTools_fromActionsSpec_map _ actionsSpec =
     let
       ActionSpec actionSpec = actionsSpec # Record.get (Proxy :: Proxy name)
     in
@@ -81,7 +83,7 @@ instance
       , description: actionSpec.description
       , parameterDefinitions: toToolParameterDefinitionsValues_fromActionParamsSpec actionSpec.params
       } Array.:
-        toTools_fromActionSpec_map (Proxy :: Proxy actionsSpecList) actionsSpec
+        toTools_fromActionsSpec_map (Proxy :: Proxy actionsSpecList) actionsSpec
   fromToolCall_toAction_map _ actionsSpec toolCall@{ name, parameters } =
     if name == reflectSymbol (Proxy :: Proxy name) then
       let
@@ -136,7 +138,7 @@ instance
     in
       Object.insert (reflectSymbol (Proxy :: Proxy name))
         { description: actionParamSpec.description
-        , required: actionParamSpec.required
+        , required: true
         , type: actionParamSpec.proxy_ty # toToolParamType
         } $
         toToolParameterDefinitionsValues_fromActionParamsSpec_map (Proxy :: Proxy actionParamsSpecList) (actionParamsSpec # Record.delete (Proxy :: Proxy name))
@@ -144,7 +146,7 @@ instance
 newtype ActionParamSpec (ty :: Type) = ActionParamSpec
   { description :: String
   , proxy_ty :: Proxy ty
-  , required :: Boolean
+  -- TODO: figure out how to handle optional arguments in Json decoding
   }
 
 -- =============================================================================
@@ -172,10 +174,9 @@ myActionsSpec =
           { distance: ActionParamSpec
               { description: "The distance to move by"
               , proxy_ty: Proxy :: Proxy Int
-              , required: true
               }
           }
       }
   }
 
-xxx = toTools_fromActionSpec myActionsSpec
+xxx = toTools_fromActionsSpec myActionsSpec

@@ -1,6 +1,6 @@
 workspace:
   packages:
-    llm-sim-v2:
+    llm-sim:
       path: ./
       dependencies:
         - aff-promise

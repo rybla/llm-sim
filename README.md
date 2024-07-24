@@ -1,15 +1,16 @@
 # llm-sim-v2
 
-To install dependencies:
-
-```bash
+```sh
 bun install
+bun run build
+bun spago run -m $example_module
 ```
 
-To run:
+where `$example_module` is the name of a module in `src/Examples/`.
 
-```bash
-bun run index.ts
+For example:
+
+```sh
+bun spago run -m Examples.Cli1
 ```
 
-This project was created using `bun init` in bun v1.1.20. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.

@@ -1,5 +1,5 @@
 package:
-  name: llm-sim-v2
+  name: llm-sim
   dependencies:
     - aff-promise
     - argonaut

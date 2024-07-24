@@ -2,6 +2,7 @@ module AI where
 
 import Prelude
 
+import Control.Promise (Promise, toAffE)
 import Data.Argonaut (class DecodeJson, class EncodeJson, Json, JsonDecodeError(..), decodeJson, encodeJson)
 import Data.Argonaut.Decode.Error (JsonDecodeError(..))
 import Data.Array as Array
@@ -25,7 +26,9 @@ foreign import make_client :: { token :: String } -> Effect Client
 -- Chat
 
 chat :: Client -> ChatRequest -> Aff NonStreamedChatResponse
-chat = unsafeCrashWith "TODO"
+chat client request = toAffE (chat_ { client, request })
+
+foreign import chat_ :: { client :: Client, request :: ChatRequest } -> Effect (Promise NonStreamedChatResponse)
 
 type ChatRequest =
   { message :: String

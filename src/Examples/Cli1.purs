@@ -2,7 +2,7 @@ module Examples.Cli1 where
 
 import Prelude
 
-import App as App
+import App.Aff as App
 import Common as C
 import Data.Options ((:=))
 import Data.String as String

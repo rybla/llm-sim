@@ -16,6 +16,7 @@ workspace:
         - lists
         - maybe
         - node-fs
+        - node-readline
         - parsing
         - prelude
         - profunctor-lenses
@@ -83,17 +84,21 @@ workspace:
         - node-event-emitter
         - node-fs
         - node-path
+        - node-process
+        - node-readline
         - node-streams
         - nonempty
         - now
         - nullable
         - numbers
+        - options
         - ordered-collections
         - orders
         - parallel
         - parsing
         - partial
         - pipes
+        - posix-types
         - prelude
         - profunctor
         - profunctor-lenses
@@ -1259,6 +1264,32 @@ packages:
     integrity: sha256-pd82nQ+2l5UThzaxPdKttgDt7xlsgIDLpPG0yxDEdyE=
     dependencies:
       - effect
+  node-process:
+    type: registry
+    version: 11.2.0
+    integrity: sha256-+2MQDYChjGbVbapCyJtuWYwD41jk+BntF/kcOTKBMVs=
+    dependencies:
+      - effect
+      - foreign
+      - foreign-object
+      - maybe
+      - node-event-emitter
+      - node-streams
+      - posix-types
+      - prelude
+      - unsafe-coerce
+  node-readline:
+    type: registry
+    version: 8.1.1
+    integrity: sha256-ZaMhfptiCquFZiDtUpH/dSBq0dPSMwQOSje5XzSAbbo=
+    dependencies:
+      - effect
+      - foreign
+      - node-event-emitter
+      - node-process
+      - node-streams
+      - options
+      - prelude
   node-streams:
     type: registry
     version: 9.0.0
@@ -1305,6 +1336,16 @@ packages:
     dependencies:
       - functions
       - maybe
+  options:
+    type: registry
+    version: 7.0.0
+    integrity: sha256-treC6h+jvzcWhplPaF/aMENCOx+JGk+ysa5pL1BGHtg=
+    dependencies:
+      - contravariant
+      - foreign
+      - foreign-object
+      - maybe
+      - tuples
   ordered-collections:
     type: registry
     version: 3.2.0
@@ -1391,6 +1432,13 @@ packages:
       - tailrec
       - transformers
       - tuples
+  posix-types:
+    type: registry
+    version: 6.0.0
+    integrity: sha256-ZfFz8RR1lee/o/Prccyeut3Q+9tYd08mlR72sIh6GzA=
+    dependencies:
+      - maybe
+      - prelude
   prelude:
     type: registry
     version: 6.0.1

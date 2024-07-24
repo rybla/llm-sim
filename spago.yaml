@@ -1,9 +1,6 @@
 package:
   name: llm-sim-v2
   dependencies:
-    - console
-    - effect
-    - prelude
     - aff-promise
     - argonaut
     - argonaut-generic
@@ -17,6 +14,7 @@ package:
     - lists
     - maybe
     - node-fs
+    - node-readline
     - parsing
     - prelude
     - profunctor-lenses

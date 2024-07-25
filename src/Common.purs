@@ -10,7 +10,6 @@ import Data.Either (either)
 import Data.Symbol (class IsSymbol, reflectSymbol)
 import Data.Variant (Variant)
 import Data.Variant as V
-import Effect.Aff (Aff)
 import Foreign.Object as Object
 import Prim.Row (class Cons, class Lacks)
 import Prim.RowList (class RowToList, RowList)
@@ -21,27 +20,13 @@ import Type.Proxy (Proxy(..))
 -- =============================================================================
 -- Model
 
-newtype Model state actionsSpec actions = Model
+newtype Model state actionsSpec actions m = Model
   { actionsSpec :: Record actionsSpec
-  , initialState :: Aff state
-  , getPrompt :: state -> Aff String
-  , updateState :: Variant actions -> state -> Aff state
-  , describeContext :: state -> String
+  , initialState :: m state
+  , updateState :: Variant actions -> state -> m state
   , describeState :: state -> String
+  , describeContext :: state -> String
   }
-
-newtype SomeModel = SomeModel (forall r. SomeModelK r -> r)
-type SomeModelK r =
-  forall state actionsSpec actions
-   . ActionsSpec actionsSpec actions
-  => Model state actionsSpec actions
-  -> r
-
-mkSomeModel :: SomeModelK SomeModel
-mkSomeModel a = SomeModel \k -> k a
-
-unSomeModel :: forall r. SomeModelK r -> SomeModel -> r
-unSomeModel k1 (SomeModel k2) = k2 k1
 
 -- =============================================================================
 -- ActionsSpec

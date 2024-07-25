@@ -11,28 +11,39 @@ import Data.Array as Array
 import Data.Either (either)
 import Data.Identity (Identity)
 import Data.Maybe (Maybe(..), maybe)
+import Data.Newtype (class Newtype, over, unwrap)
 import Data.String as String
 import Data.String.CodePoints as CodePoints
 import Data.Traversable (traverse, traverse_)
 import Data.Variant as V
+import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Aff as Aff
 import Halogen as H
+import Halogen.Aff as Halogen.Aff
+import Halogen.Aff as Halogen.Aff.Util
 import Halogen.HTML as HH
+import Halogen.VDom.Driver as Halogen.VDom.Driver
+import Secret as Secret
 import Type.Proxy (Proxy(..))
+
+runApp :: forall state actionsSpec actions. C.ActionsSpec actionsSpec actions => AppInput state actionsSpec actions -> Effect Unit
+runApp input = Halogen.Aff.runHalogenAff (Halogen.VDom.Driver.runUI appComponent input =<< Halogen.Aff.Util.awaitBody)
+
+-- =============================================================================
 
 type AppQuery state actionsSpec actions = Identity
 
 type AppInput state actionsSpec actions =
-  { model :: C.Model state actionsSpec actions
+  { model :: C.Model state actionsSpec actions Aff
   , promptComponent :: PromptComponent
   , viewComponent :: ViewComponent state
   }
 
 type AppOutput state actionsSpec actions = Void
 
-type AppState state actionsSpec actions =
-  { model :: C.Model state actionsSpec actions
+newtype AppState state actionsSpec actions = AppState
+  { model :: C.Model state actionsSpec actions Aff
   , tools :: Ai.Tools
   , mb_initialState :: Maybe state
   , mb_client :: Maybe Ai.Client
@@ -40,9 +51,18 @@ type AppState state actionsSpec actions =
   , viewComponent :: ViewComponent state
   }
 
+derive instance Newtype (AppState state actionsSpec actions) _
+
 data AppAction state actionsSpec actions
   = Initialize_AppAction
   | SubmitPrompt_AppAction String
+
+type AppSlots state actionsSpec actions =
+  ( prompt :: H.Slot PromptQuery PromptOutput Unit
+  , view :: H.Slot (ViewQuery state) (ViewOutput state) Unit
+  )
+
+type AppM state actionsSpec actions = H.HalogenM (AppState state actionsSpec actions) (AppAction state actionsSpec actions) (AppSlots state actionsSpec actions) (AppOutput state actionsSpec actions) Aff
 
 appComponent
   :: forall state actionsSpec actions
@@ -53,13 +73,14 @@ appComponent = H.mkComponent { initialState: initialComponentState, eval, render
 
   initialComponentState :: AppInput state actionsSpec actions -> AppState state actionsSpec actions
   initialComponentState { model: model@(C.Model { actionsSpec }), promptComponent, viewComponent } =
-    { model
-    , tools: C.toTools_fromActionsSpec actionsSpec
-    , mb_initialState: Nothing
-    , mb_client: Nothing
-    , promptComponent
-    , viewComponent
-    }
+    AppState
+      { model
+      , tools: C.toTools_fromActionsSpec actionsSpec
+      , mb_initialState: Nothing
+      , mb_client: Nothing
+      , promptComponent
+      , viewComponent
+      }
 
   eval = H.mkEval H.defaultEval { initialize = Just Initialize_AppAction, handleAction = handleAction }
 
@@ -82,19 +103,21 @@ appComponent = H.mkComponent { initialState: initialComponentState, eval, render
   getModelViewState = H.request (Proxy :: Proxy "view") unit GetState_ViewQuery >>= maybe (throwError (Aff.error "[getModelViewState] view component does not exist")) pure
 
   getClient :: _ Ai.Client
-  getClient = H.gets _.mb_client >>= maybe (throwError (Aff.error "[getClient] client has not yet been initialized")) pure
+  getClient = H.gets (unwrap >>> _.mb_client) >>= maybe (throwError (Aff.error "[getClient] client has not yet been initialized")) pure
 
   handleAction = case _ of
 
     Initialize_AppAction -> do
-      { model: C.Model model } <- H.get
+      AppState { model: C.Model model } <- H.get
       initialState <- model.initialState # H.liftAff
-      H.modify_ _ { mb_initialState = Just initialState }
+      client <- Ai.make_client { token: Secret.cohere_token } # H.liftEffect
+      H.modify_ (over AppState _ { mb_initialState = Just initialState, mb_client = Just client })
       pure unit
 
     SubmitPrompt_AppAction prompt -> do
+      H.tell (Proxy :: Proxy "view") unit (SetAnnotation_ViewQuery prompt)
       client <- getClient
-      { model: model@(C.Model { actionsSpec, updateState }), tools } <- H.get
+      AppState { model: model@(C.Model { actionsSpec, updateState }), tools } <- H.get
       preactions :: Array String <- do
         modelState <- getModelViewState
         sequentializePromptToPreactions_chat { client, model, tools, state: modelState, prompt, sequentialize_tools }
@@ -122,13 +145,13 @@ appComponent = H.mkComponent { initialState: initialComponentState, eval, render
                               C.fromToolCall_toAction actionsSpec toolCall
                                 # runExceptT
                                 # bindFlipped (either (\err -> throwError (Aff.error err)) pure)
-                                # bindFlipped (\action -> H.tell (Proxy :: Proxy "view") unit (UpdateState_ViewQuery (updateState action)))
+                                # bindFlipped (\action -> H.tell (Proxy :: Proxy "view") unit (UpdateState_ViewQuery prompt (updateState action)))
                           )
                       )
             )
       pure unit
 
-  render { mb_initialState, promptComponent, viewComponent } =
+  render (AppState { mb_initialState, promptComponent, viewComponent }) =
     HH.div
       []
       ( [ [ HH.slot (Proxy :: Proxy "prompt") unit promptComponent {}
@@ -137,7 +160,7 @@ appComponent = H.mkComponent { initialState: initialComponentState, eval, render
           ]
         , case mb_initialState of
             Nothing -> []
-            Just initialState -> [ HH.slot_ (Proxy :: Proxy "view") unit viewComponent { initialState } ]
+            Just state -> [ HH.slot_ (Proxy :: Proxy "view") unit viewComponent { state } ]
         ] # Array.fold
       )
 
@@ -157,10 +180,11 @@ type ViewComponent state = H.Component (ViewQuery state) (ViewInput state) (View
 
 data ViewQuery state (a :: Type)
   = GetState_ViewQuery (state -> a)
-  | UpdateState_ViewQuery (state -> Aff state) a
+  | UpdateState_ViewQuery String (state -> Aff state) a
+  | SetAnnotation_ViewQuery String a
 
 type ViewInput state =
-  { initialState :: state }
+  { state :: state }
 
 type ViewOutput (state :: Type) = Void
 

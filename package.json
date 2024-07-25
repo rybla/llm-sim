@@ -2,10 +2,14 @@
   "name": "llm-sim",
   "type": "module",
   "scripts": {
-    "build": "spago build"
+    "build": "spago build",
+    "serve": "http-server ./docs",
+    "bundle.Hyper1": "bun spago bundle --module Examples.Hyper1 --outfile ./docs/Hyper1/main.js"
   },
   "devDependencies": {
-    "purescript": "^0.15.16-1",
+    "esbuild": "^0.23.0",
+    "http-server": "^14.1.1",
+    "purescript": "^0.15.16-3",
     "spago": "^0.93.37"
   },
   "dependencies": {

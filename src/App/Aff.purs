@@ -23,9 +23,10 @@ import Type.Proxy (Proxy(..))
 runModel
   :: forall state actionsSpec actions
    . C.ActionsSpec actionsSpec actions
-  => C.Model state actionsSpec actions
+  => { getPrompt :: state -> Aff String }
+  -> C.Model state actionsSpec actions Aff
   -> Aff Unit
-runModel (C.Model model) = do
+runModel { getPrompt } (C.Model model) = do
   let
     sequentialize_actionsSpec =
       { submit_interpretation: C.ActionSpec
@@ -163,7 +164,7 @@ Your task is to interpret this informal instruction by using the corresponding t
   let
     go :: forall a. Unit -> Aff a
     go it = do
-      prompt <- model.getPrompt =<< (state_ref # Ref.read # liftEffect)
+      prompt <- getPrompt =<< (state_ref # Ref.read # liftEffect)
       execPrompt prompt
       go it
 

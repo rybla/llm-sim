@@ -16,37 +16,44 @@ import Node.ReadLine.Aff as ReadLine.Aff
 import Type.Proxy (Proxy(..))
 
 main :: Effect Unit
-main = App.runModel model # Aff.launchAff_
+main = App.runModel { getPrompt } model # Aff.launchAff_
+  where
 
-model = C.Model
-  let
-    actionsSpec =
-      { move: C.ActionSpec
-          { description: "Move a distance"
-          , params:
-              { distance: C.ActionParamSpec
-                  { description: "The distance to move by"
-                  , proxy_ty: Proxy :: Proxy Int
-                  }
-              }
-          }
-      , set_light_color: C.ActionSpec
-          { description: "Set the robot's light color."
-          , params:
-              { color: C.ActionParamSpec
-                  { description: "A string representing the robot's new light color"
-                  , proxy_ty: Proxy :: Proxy String
-                  }
-              }
-          }
-      }
+  getPrompt state@{ interface } =
+    ReadLine.Aff.question
+      (describeState state <> "\n\nprompt: ")
+      interface
 
-    describeState { position, color } =
-      [ ""
-      , "position: " <> show position
-      , "color: " <> show color
-      ] # String.joinWith "\n"
-  in
+  describeContext _ = "You are controlling a robot with one dimension of movement and a colored light attachment."
+
+  actionsSpec =
+    { move: C.ActionSpec
+        { description: "Move a distance"
+        , params:
+            { distance: C.ActionParamSpec
+                { description: "The distance to move by"
+                , proxy_ty: Proxy :: Proxy Int
+                }
+            }
+        }
+    , set_light_color: C.ActionSpec
+        { description: "Set the robot's light color."
+        , params:
+            { color: C.ActionParamSpec
+                { description: "A string representing the robot's new light color"
+                , proxy_ty: Proxy :: Proxy String
+                }
+            }
+        }
+    }
+
+  describeState { position, color } =
+    [ ""
+    , "position: " <> show position
+    , "color: " <> show color
+    ] # String.joinWith "\n"
+
+  model = C.Model
     { actionsSpec
 
     , initialState: do
@@ -61,18 +68,13 @@ model = C.Model
           , interface
           }
 
-    , getPrompt: \state@{ interface } ->
-        ReadLine.Aff.question
-          (describeState state <> "\n\nprompt: ")
-          interface
-
     , updateState: V.match
         { move: \(C.Action { distance }) state@{ position } -> pure state { position = position + distance }
         , set_light_color: \(C.Action { color }) state -> pure state { color = color }
         }
 
-    , describeContext: \_ -> "You are controlling a robot with one dimension of movement and a colored light attachment."
-
     , describeState
+    , describeContext
+
     }
 
